@@ -18,7 +18,7 @@ def export_historical(driver):
     z = []
     #count = 0
     products = {
-        'mais': ['Bordeaux Rendu', 'La Pallice Rendu', 'Rhin Fob', 'Bordeaux Fob', 'Pontivy Rendu'],
+        'mais': ['Bordeaux Rendu', 'La Pallice Rendu', 'Rhin Fob', 'Bordeaux Fob'],
         'ble-tendre': ['Rouen Rendu', 'Dunkerque Rendu', 'La Pallice Rendu', 'Creil Fob', 'Moselle Fob', 'Rouen Fob'],
         'ble-dur': ['La Pallice Rendu', 'Port-La-Nouvelle Rendu'],# 'Sud-Est Départ', 'Sud-Ouest Départ'],
         'colza': ['Rouen Rendu', 'Moselle Fob']
@@ -62,7 +62,7 @@ def export_historical(driver):
 
 def export_last(driver):
     data = export_historical(driver)
-    data = data[data['Date'] == (pd.Timestamp.today().normalize() + timedelta(hours=23))]
+    data = data[data['Date'] == (pd.Timestamp.today().normalize() + timedelta(hours=22))]
     return data
 
 def insert_db(df):
@@ -97,7 +97,7 @@ def historical_insert_db(df):
 
 if __name__ == "__main__":
     #SETUP SELENIUM
-    driver_path = 'C:/Users/alexl/Documents/GitHub/CodeReaderCOT/agri/data/driver/chromedriver.exe'
+    driver_path = 'C:/Users/alexl/Documents/GitHub/agriData/data/driver/chromedriver.exe'
     brave_path = 'C:/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe'
     option = Options()
     option.binary_location = brave_path
