@@ -6,7 +6,7 @@ import database as db
 
 def find_report():
     urlMais = 'https://visionet.franceagrimer.fr/Pages/OpenDocument.aspx?fileurl=SeriesChronologiques%2fproductions%20vegetales%2fgrandes%20cultures%2fetats%20des%20cultures%2fSCR-GRC-CEREOBS_M_depuis_2015-A24.xlsx&telechargersanscomptage=oui'
-    urlCereales = 'https://visionet.franceagrimer.fr/Pages/OpenDocument.aspx?fileurl=SeriesChronologiques%2fproductions%20vegetales%2fgrandes%20cultures%2fetats%20des%20cultures%2fSCR-GRC-CEREOBS_CP_depuis_2015-A24.xlsx&telechargersanscomptage=oui'
+    urlCereales = 'https://visionet.franceagrimer.fr/Pages/OpenDocument.aspx?fileurl=SeriesChronologiques%2fproductions%20vegetales%2fgrandes%20cultures%2fetats%20des%20cultures%2fSCR-GRC-CEREOBS_CP_depuis_2015-A25.xlsx&telechargersanscomptage=oui'
     try:
         r = requests.get(urlMais)
         r.raise_for_status()
