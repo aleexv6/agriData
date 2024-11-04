@@ -166,3 +166,4 @@ cython_debug/
 *.xlsx
 *.zip
 *.exe
+*.txt
