@@ -11,7 +11,7 @@ WEEK = []
 with open('week.txt', 'r') as file:
     SEMAINE = int(file.read().strip()) #Keep track of the week in a separate txt file
 
-def cereobsReport(type, semaine, id_culture, stade_dev=None): #download data from url
+def cereobsReport(type, semaine, id_culture, stade_dev=None):
     if type == 'Condition':
         url = f"https://cereobs.franceagrimer.fr/cereobs-sp/api/public/publications/rapportCereobs?semaineObservation={semaine}&idCulture={id_culture}&typePublication=5"
     elif type == 'Developpement':
@@ -20,24 +20,26 @@ def cereobsReport(type, semaine, id_culture, stade_dev=None): #download data fro
         print('Wrong type')
         return 0
     r = requests.get(url)
-    content_type = r.headers.get('Content-Type') # check if json or excel, if json, no data
-    content_disposition = r.headers.get('Content-Disposition') #check for file name wich contains the week string we are looking for
+    content_type = r.headers.get('Content-Type')
+    content_disposition = r.headers.get('Content-Disposition')
     if content_disposition:
-        match = re.search(r'\d{4}-S\d{2}', content_disposition) #get the week in filename if it exists
+        match = re.search(r'\d{4}-S\d{2}', content_disposition) 
         if match:
-            WEEK.append(match.group()) #append to week for usage 
+            WEEK.append(match.group())
         else:
             print('Something went wrong with Year and Week in file extraction')
             return 0            
     if content_type == 'application/vnd.ms-excel':
-        df = pd.read_excel(io.BytesIO(r.content))
         if type == 'Developpement': 
+            df = pd.read_excel(io.BytesIO(r.content), skiprows=3)[:-4]
             df = df.rename(columns={df.columns[0]: 'Region', df.columns[1]: 'Actual'})
+            df = df[['Region', 'Actual']]
         elif type == 'Condition':
+            df = pd.read_excel(io.BytesIO(r.content), skiprows=3)[:-8]
             df = df.rename(columns={df.columns[0]: 'Region', df.columns[1]: 'Très mauvaises', df.columns[2]: 'Mauvaises', df.columns[3]: 'Assez bonnes', df.columns[4]: 'Bonnes', df.columns[5]: 'Très bonnes'})
             df = df[['Region', 'Très mauvaises', 'Mauvaises', 'Assez bonnes', 'Bonnes', 'Très bonnes']]
     else:
-        df = pd.DataFrame() #if no data, return an empty df
+        df = pd.DataFrame()
     return df
 
 def monday_of_week(year, week): # find the monday of the year and week number
@@ -46,23 +48,23 @@ def monday_of_week(year, week): # find the monday of the year and week number
     monday_of_given_week = first_monday + pd.Timedelta(weeks=week-1)
     return monday_of_given_week
 
-def insert_db(dfFrance): # insert data to database
+def insert_db(dfFrance):
     rFrance = 'Nothing in the database, add historical data first'
     dbname = db.get_database()
-    collection_name_france = dbname["dev_cond_france"]
+    collection_name_france = dbname["dev_cond"]
     dataFrance = dfFrance.to_dict('records')
     last_doc_france = collection_name_france.find_one(
             sort=[( 'Date', pymongo.DESCENDING )]
         )
-    if last_doc_france is not None: #chech if there are data already if not we need to insert historical
+    if last_doc_france is not None:
             if not dfFrance.empty:
                 if dfFrance['Date'].iloc[0] != last_doc_france['Date']:
                     rFrance = str(collection_name_france.insert_many(dataFrance))
                     rFrance = 'Développement des cultures France : ' + rFrance
-                    with open('week.txt', 'w') as file: #after appending to database, we increment the week number in txt file for next week
+                    with open('week.txt', 'w') as file:
                         file.write(str(SEMAINE+1))
                 else:
-                    rFrance = 'Moyenne France : Document non inséré, doublon date avec le dernier document en base.'
+                    rFrance = 'DevCond : Document non inséré, doublon date avec le dernier document en base.'
             else:
                 rFrance = 'NO DATA TO IMPORT TODAY, EMPTY DATAFRAME'
     return rFrance
@@ -95,54 +97,64 @@ if __name__ == "__main__":
     #Creating a list of dict with found data
     devMap = []
     for idx, da in cultureMap.items():
-        tmpMap = {}
-        tmpMap['Culture'] = da
         if da.startswith('Blé'):
-            for i, d in bleMap.items(): #checks for evry state of dev, if empty, no data, else we append the dict
+            for i, d in bleMap.items(): #checks for every developpement state
                 tmp = cereobsReport('Developpement', SEMAINE, idx, i)
                 if not tmp.empty:
-                    data = tmp[tmp['Region'] == 'Moyenne France']['Actual'].item()
-                    tmpMap[d] = data
+                    tmp = tmp.rename(columns={'Actual': d})
+                    tmp['Culture'] = da
+                    data = tmp
                 else:
-                    tmpMap[d] = None
-        #We do the same for maïs
-        else:
+                    data = pd.DataFrame([{'Region': 'Auvergne-Rhône-Alpes', d: None, 'Culture': da}, {'Region': 'Bourgogne-Franche-Comté', d: None, 'Culture': da}, {'Region': 'Bretagne', d: None, 'Culture': da}, {'Region': 'Centre-Val de Loire', d: None, 'Culture': da}, {'Region': 'Grand-Est', d: None, 'Culture': da}, {'Region': 'Hauts-de-France', d: None, 'Culture': da}, {'Region': 'Ile-de-France', d: None, 'Culture': da}, {'Region': 'Normandie', d: None, 'Culture': da}, {'Region': 'Nouvelle-Aquitaine', d: None, 'Culture': da}, {'Region': 'Occitanie', d: None, 'Culture': da}, {'Region': 'Pays-de-la-Loire', d: None, 'Culture': da}, {'Region': "Provence-Alpes-Côte d'Azur", d: None, 'Culture': da}, {'Region': 'Moyenne France', d: None, 'Culture': da}])
+                devMap.append(data)
+        else: # do the same for maïs
             for i, d in maisMap.items():
                 tmp = cereobsReport('Developpement', SEMAINE, idx, i)
                 if not tmp.empty:
-                    data = tmp[tmp['Region'] == 'Moyenne France']['Actual'].item()
-                    tmpMap[d] = data
+                    tmp = tmp.rename(columns={'Actual': d})
+                    tmp['Culture'] = da
+                    data = tmp
                 else:
-                    tmpMap[d] = None
-        devMap.append(tmpMap)
+                    data = pd.DataFrame([{'Region': 'Auvergne-Rhône-Alpes', d: None, 'Culture': da}, {'Region': 'Bourgogne-Franche-Comté', d: None, 'Culture': da}, {'Region': 'Bretagne', d: None, 'Culture': da}, {'Region': 'Centre-Val de Loire', d: None, 'Culture': da}, {'Region': 'Grand-Est', d: None, 'Culture': da}, {'Region': 'Hauts-de-France', d: None, 'Culture': da}, {'Region': 'Ile-de-France', d: None, 'Culture': da}, {'Region': 'Normandie', d: None, 'Culture': da}, {'Region': 'Nouvelle-Aquitaine', d: None, 'Culture': da}, {'Region': 'Occitanie', d: None, 'Culture': da}, {'Region': 'Pays-de-la-Loire', d: None, 'Culture': da}, {'Region': "Provence-Alpes-Côte d'Azur", d: None, 'Culture': da}, {'Region': 'Moyenne France', d: None, 'Culture': da}])
+                devMap.append(data)
 
     #Same for conditions
     condMap = []
+    regions = ["Auvergne-Rhône-Alpes", "Provence-Alpes-Côte d'Azur", "Grand-Est", "Centre-Val de Loire", "Nouvelle-Aquitaine", "Occitanie", "Bretagne", "Hauts-de-France", "Bourgogne-Franche-Comté", "Ile-de-France", "Normandie", "Pays-de-la-Loire", "Moyenne France (1)"]
     for idx, da in cultureMap.items():
-        tmpMap = {}
-        tmpMap['Culture'] = da
         tmp = cereobsReport('Condition', SEMAINE, idx)
         if not tmp.empty:
-            data = tmp[tmp['Region'] == 'Moyenne France (1)'][['Très mauvaises', 'Mauvaises', 'Assez bonnes', 'Bonnes', 'Très bonnes']].to_dict(orient='records')[0]
+            tmp['Culture'] = da
+            data = tmp.to_dict(orient='records')
         else:
-            data = {'Très mauvaises': None, 'Mauvaises': None, 'Assez bonnes': None, 'Bonnes': None, 'Très bonnes': None}
-        condMap.append(tmpMap | data) #Logical or between dicts
+            data = []
+            for region in regions:
+                dataDict = {'Region': region,'Culture': da, 'Très mauvaises': None, 'Mauvaises': None, 'Assez bonnes': None, 'Bonnes': None, 'Très bonnes': None}
+                data.append(dataDict)
+        condMap.append(data)
 
-    #set dicts to df to facilitate the merge
-    devDf = pd.DataFrame(devMap)
-    condDf = pd.DataFrame(condMap)
-    df = pd.merge(devDf, condDf, on=['Culture'], how='inner') #merge data
-    if len(list(set(WEEK))) == 1: #We check if we downloaded data for one week ONLY
-        df['Semaine'] = WEEK[0]
+    #set a dev dataframe for manipulation
+    concated = pd.concat(devMap).reset_index(drop=True)
+    group = concated.groupby(['Region', 'Culture']).max()
+    dfDev = group.reset_index()
+    #same for conditions
+    dfCond = pd.DataFrame([item for dataset in condMap for item in dataset])
+    dfCond['Region'] = dfCond['Region'].str.replace('Moyenne France (1)', 'Moyenne France')
+
+    #merge both dfs
+    dfDevCond = pd.merge(dfCond, dfDev, on=['Region', 'Culture'], how='outer')
+
+    #add data and reformat df to be the same form as historical data and app in the database
+    if len(list(set(WEEK))) == 1:
+        dfDevCond['Semaine'] = WEEK[0]
     else:
         print('Non-unique weeks in data, check download')
-    #Add data to df and set a specific order to be the same as the one on database for easier app implementation
-    df['Year'] = int(WEEK[0].split('-')[0])
-    df['Week'] = int(WEEK[0].split('-')[1][1:])
-    df['Date'] = df.apply(lambda row: monday_of_week(row['Year'], row['Week']), axis=1)
-    df = df[['Culture', 'Semaine', 'Semis', 'Levée', '6/8 feuilles visibles', 'Floraison femelle', 'Humidité du grain 50%', 'Récolte', 'Très mauvaises', 'Mauvaises', 'Assez bonnes', 'Bonnes', 'Très bonnes', 'Week', 'Year', 'Date', 'Début tallage', 'Épi 1cm', 'Deux noeuds', 'Épiaison']]
-
-    rFrance = insert_db(df) #insert to db
+    dfDevCond['Year'] = int(WEEK[0].split('-')[0])
+    dfDevCond['Week'] = int(WEEK[0].split('-')[1][1:])
+    dfDevCond['Date'] = dfDevCond.apply(lambda row: monday_of_week(row['Year'], row['Week']), axis=1)
+    dfDevCond = dfDevCond.rename(columns={'Épi 1cm': 'Épi 1 cm', 'Deux noeuds': '2 noeuds', 'Region': 'Région'})
+    dfDevCond = dfDevCond[['Culture', 'Région', 'Semaine', 'Semis', 'Levée', '6/8 feuilles visibles', 'Floraison femelle', 'Humidité du grain 50%', 'Récolte', 'Très mauvaises', 'Mauvaises', 'Assez bonnes', 'Bonnes', 'Très bonnes', 'Week', 'Year', 'Date', 'Début tallage', 'Épi 1 cm', '2 noeuds', 'Épiaison']]
+    rFrance = insert_db(dfDevCond) #insert to db
     #Logs into my Discord server to be keep track of bugs 
     webhook = DiscordWebhook(url=config.discordLogWebhookUrl, content='**########## CEREOBS WEEKLY DEV/COND DATA #########**' + '\n' + rFrance)
     response = webhook.execute()
