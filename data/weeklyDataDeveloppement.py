@@ -117,7 +117,6 @@ if __name__ == "__main__":
                 else:
                     data = pd.DataFrame([{'Region': 'Auvergne-Rhône-Alpes', d: None, 'Culture': da}, {'Region': 'Bourgogne-Franche-Comté', d: None, 'Culture': da}, {'Region': 'Bretagne', d: None, 'Culture': da}, {'Region': 'Centre-Val de Loire', d: None, 'Culture': da}, {'Region': 'Grand-Est', d: None, 'Culture': da}, {'Region': 'Hauts-de-France', d: None, 'Culture': da}, {'Region': 'Ile-de-France', d: None, 'Culture': da}, {'Region': 'Normandie', d: None, 'Culture': da}, {'Region': 'Nouvelle-Aquitaine', d: None, 'Culture': da}, {'Region': 'Occitanie', d: None, 'Culture': da}, {'Region': 'Pays-de-la-Loire', d: None, 'Culture': da}, {'Region': "Provence-Alpes-Côte d'Azur", d: None, 'Culture': da}, {'Region': 'Moyenne France', d: None, 'Culture': da}])
                 devMap.append(data)
-
     #Same for conditions
     condMap = []
     regions = ["Auvergne-Rhône-Alpes", "Provence-Alpes-Côte d'Azur", "Grand-Est", "Centre-Val de Loire", "Nouvelle-Aquitaine", "Occitanie", "Bretagne", "Hauts-de-France", "Bourgogne-Franche-Comté", "Ile-de-France", "Normandie", "Pays-de-la-Loire", "Moyenne France (1)"]
