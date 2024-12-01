@@ -11,9 +11,9 @@ from discord_webhook import DiscordWebhook
 import config
 
 URLS = {
-    'EBM': 'https://live.euronext.com/fr/product/commodities-futures/EBM-DPAR/settlement-prices',
-    'EMA': 'https://live.euronext.com/fr/product/commodities-futures/EMA-DPAR/settlement-prices',
-    'ECO': 'https://live.euronext.com/fr/product/commodities-futures/ECO-DPAR/settlement-prices'
+    'EBM': ['https://live.euronext.com/fr/product/commodities-futures/EBM-DPAR/settlement-prices', 12],
+    'EMA': ['https://live.euronext.com/fr/product/commodities-futures/EMA-DPAR/settlement-prices', 10],
+    'ECO': ['https://live.euronext.com/fr/product/commodities-futures/ECO-DPAR/settlement-prices', 10]
 }
 MONTHS = {
     'FEV': 'FEB',
@@ -64,15 +64,15 @@ def scrapper(url):
 
 def clean_scrapped(urls, RESPONSE=RESPONSE):
     df_lists = []
-    for idx, item in urls.items(): #loop throught tickers and URLs
+    for idx, item in urls.items(): #loop throught tickers, URLs and max available contract for eact tickers
         retry = 0
-        while retry < 5:  # Retry up to 5 times
-            tmp = scrapper(item) #set scrapped df in tmp
+        while retry < 10:  # Retry up to 10 times
+            tmp = scrapper(item[0]) #set scrapped df in tmp
             if not tmp.empty: # if tmp not empty meaning we scrapped something
-                if len(tmp['Compens.'].unique()) == 1 or 'nan' in tmp['Compens.'].astype(str).values: #if only one unique compensation, it means it is either full nan values or not the full values -> we retry, or if their is at least one nan value in compens. -> we retry 
+                if len(tmp) != item[1] or 'nan' in tmp['Compens.'].astype(str).values: #if we de not have full futures month data -> we retry, or if their is at least one nan value in compens. -> we retry 
                     #retry
-                    RESPONSE += f"{idx} full data not received, retrying..."
-                    time.sleep(300) #5m sleep
+                    RESPONSE += f"{idx} full data not received, retrying...\n"
+                    time.sleep(60) #1m sleep
                     retry += 1
                     continue  # Retry the current iteration
                 else:
@@ -80,11 +80,12 @@ def clean_scrapped(urls, RESPONSE=RESPONSE):
                     tmp['Ticker'] = idx #add ticker to df
                     tmp['Date'] = datetime.today().strftime('%Y-%m-%d')
                     df_lists.append(tmp)
-                    RESPONSE += f"{idx}, data scrapped ok"
+                    RESPONSE += f"{idx}, data scrapped ok\n"
                     break
             else: #if there is nothing scrapped
-                RESPONSE += f"Error scrapping data, get empty dataframe for {idx}"
-                break
+                RESPONSE += f"Error scrapping data, get empty dataframe for {idx}\n"
+                time.sleep(60) #1m sleep
+                continue
         else:
             # Exceeded max retries, skip this item
             RESPONSE += f'Skipping {idx} after max retries, no full data found\n'
