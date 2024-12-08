@@ -21,9 +21,11 @@ MONTHS = {
     'JUIN': 'JUN',
     'AOU': 'AUG'
 }
-RESPONSE = '**####### EURONEXT FUTURES DATA #######\n**'
 
-def insert_db(df, RESPONSE=RESPONSE):
+RESPONSE = '**####### NEW EURONEXT FUTURES DATA #######**\n'
+
+def insert_db(df):
+    r = ''
     dbname = db.get_database()
     collection_name_france = dbname["futures"]
     data = df.to_dict('records') #df to dict
@@ -34,14 +36,14 @@ def insert_db(df, RESPONSE=RESPONSE):
             if not df.empty: #if df not empty
                 if df['Date'].iloc[0] != last_doc_france['Date']: #check if we already have this date as last date, if not insert data
                     inserted = str(collection_name_france.insert_many(data))
-                    RESPONSE += inserted
+                    r += inserted
                 else:
-                    RESPONSE += 'Euronext Futures : Document non inséré, doublon date avec le dernier document en base.'
+                    r += 'Euronext Futures : Document non inséré, doublon date avec le dernier document en base.\n'
             else:
-                RESPONSE += 'NO DATA TO IMPORT TODAY, EMPTY DATAFRAME'
+                r += 'NO DATA TO IMPORT TODAY, EMPTY DATAFRAME\n'
     else:
-        RESPONSE += 'NO DATA IN DB, INSERT HISTORICAL FIRST'
-    return RESPONSE
+        r += 'NO DATA IN DB, INSERT HISTORICAL FIRST\n'
+    return r
 
 def maturity_to_expiration(series, months_map=MONTHS):
     strs = series.apply(unidecode).str.upper()
@@ -71,8 +73,8 @@ def clean_scrapped(urls, RESPONSE=RESPONSE):
             if not tmp.empty: # if tmp not empty meaning we scrapped something
                 if len(tmp['Compens.'].unique()) == 1 or 'nan' in tmp['Compens.'].astype(str).values: #if only one unique compensation, it means it is either full nan values or not the full values -> we retry, or if their is at least one nan value in compens. -> we retry 
                     #retry
-                    RESPONSE += f"{idx} full data not received, retrying..."
-                    time.sleep(300) #5m sleep
+                    RESPONSE += f"{idx} full data not received, retrying...\n"
+                    time.sleep(60) #1m sleep
                     retry += 1
                     continue  # Retry the current iteration
                 else:
@@ -80,27 +82,28 @@ def clean_scrapped(urls, RESPONSE=RESPONSE):
                     tmp['Ticker'] = idx #add ticker to df
                     tmp['Date'] = datetime.today().strftime('%Y-%m-%d')
                     df_lists.append(tmp)
-                    RESPONSE += f"{idx}, data scrapped ok"
+                    RESPONSE += f"{idx}, data scrapped ok\n"
                     break
             else: #if there is nothing scrapped
-                RESPONSE += f"Error scrapping data, get empty dataframe for {idx}"
-                break
+                RESPONSE += f"Error scrapping data, got empty dataframe for {idx}, retrying...\n"
+                time.sleep(60) #1m sleep
+                continue
         else:
             # Exceeded max retries, skip this item
             RESPONSE += f'Skipping {idx} after max retries, no full data found\n'
-       
     df = pd.concat(df_lists) #concat into one df
-    return df
+    return df, RESPONSE
 
 if __name__ == "__main__":
-    df = clean_scrapped(URLS).reset_index(drop=True)
+    df, RESPONSE = clean_scrapped(URLS)
+    df = df.reset_index(drop=True)
     df['Expiration'] = maturity_to_expiration(df['Maturité'])
     df = df.rename(columns={'Ouvert': 'Open', 'Haut': 'High', 'Bas': 'Low', 'Compens.': 'Close', 'Position ouverte': 'Open Interest'})
     df = df[['Date', 'Ticker', 'Expiration', 'Open', 'High', 'Low', 'Close', 'Volume', 'Open Interest']]
     df['Close'] = df['Close'].astype(float)
-
     r = insert_db(df) #insert to db
+    RESPONSE += r
     #Logs into my Discord server to be keep track of bugs 
-    webhook = DiscordWebhook(url=config.discordLogWebhookUrl, content=r)
+    webhook = DiscordWebhook(url=config.discordLogWebhookUrl, content=RESPONSE)
     response = webhook.execute()
 

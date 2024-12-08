@@ -38,9 +38,9 @@ def export_historical(driver):
             select = Select(driver.find_element(By.ID, 'place-graph-selector'))
             select.select_by_visible_text(place)
             time.sleep(3)
-            produit = driver.execute_script(f'return Highcharts.charts[{count2}].series[0].userOptions.name')
-            dates = driver.execute_script(f'return Highcharts.charts[{count2}].series[0].xData')
-            values = driver.execute_script(f'return Highcharts.charts[{count2}].series[0].yData')
+            produit = driver.execute_script(f'return Highcharts.charts[1].series[0].name')
+            dates = driver.execute_script(f'return Highcharts.charts[1].series[0].xData')
+            values = driver.execute_script(f'return Highcharts.charts[1].series[0].yData')
             char_to_replace = {'É':'E', 'Ï':'I', 'é':'e', 'ï':'i'}
             for key, value in char_to_replace.items():
                 produit = produit.replace(key, value)
@@ -51,7 +51,6 @@ def export_historical(driver):
             else:
                 prod = produit.split(' ', 1)[0]
                 place_name = produit.split(' ', 1)[1]
-
             df = pd.DataFrame({'Date': dates, 'Produit': prod, 'Place':place_name, 'Prix': values })
             df['Date'] = pd.to_datetime(df['Date'], unit='ms')
             count2 += 1
