@@ -74,7 +74,7 @@ def clean_scrapped(urls, RESPONSE=RESPONSE):
                 if len(tmp) != item[1] or 'nan' in tmp['Compens.'].astype(str).values: #if we de not have full futures month data -> we retry, or if their is at least one nan value in compens. -> we retry 
                     #retry
                     RESPONSE += f"{idx} full data not received, retrying...\n"
-                    time.sleep(60) #1m sleep
+                    time.sleep(120) #2m sleep
                     retry += 1
                     continue  # Retry the current iteration
                 else:
@@ -86,11 +86,11 @@ def clean_scrapped(urls, RESPONSE=RESPONSE):
                     break
             else: #if there is nothing scrapped
                 RESPONSE += f"Error scrapping data, got empty dataframe for {idx}, retrying...\n"
-                time.sleep(60) #1m sleep
+                time.sleep(120) #2m sleep
                 continue
         else:
             # Exceeded max retries, skip this item
-            RESPONSE += f'Skipping {idx} after max retries, no full data found\n'
+            RESPONSE += f'@everyone Skipping {idx} after max retries, no full data found\n'
     df = pd.concat(df_lists) #concat into one df
     return df, RESPONSE
 
