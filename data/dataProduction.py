@@ -7,7 +7,7 @@ import pymongo
 import openpyxl.reader.excel
 
 def find_report():
-    url = 'https://visionet.franceagrimer.fr/Pages/OpenDocument.aspx?fileurl=SeriesChronologiques%2fproductions%20vegetales%2fgrandes%20cultures%2fcollecte%2cstocks%2cd%c3%a9p%c3%b4ts%2fSCR-GRC-histNAT_collecte_stock_depuis_2000-C23.zip&telechargersanscomptage=oui'
+    url = 'https://visionet.franceagrimer.fr/Pages/OpenDocument.aspx?fileurl=SeriesChronologiques%2fproductions%20vegetales%2fgrandes%20cultures%2fcollecte%2cstocks%2cd%c3%a9p%c3%b4ts%2fSCR-GRC-histNAT_collecte_stock_depuis_2000-C24.zip&telechargersanscomptage=oui'
     try:
         r = requests.get(url)
         r.raise_for_status()
@@ -28,9 +28,9 @@ def find_report():
 def prep_dataframe():
     find_report()
     openpyxl.reader.excel.ARC_CORE = "random letters to avoid error"
-    dfBle = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C23.xlsx', sheet_name='Blé tendre', skiprows=4)
-    dfColza = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C23.xlsx', sheet_name='Colza', skiprows=4)
-    dfMais = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C23.xlsx', sheet_name='Maïs', skiprows=4)
+    dfBle = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C24.xlsx', sheet_name='Blé tendre', skiprows=4)
+    dfColza = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C24.xlsx', sheet_name='Colza', skiprows=4)
+    dfMais = pd.read_excel('prod_report/SCR-GRC-histNAT_collecte_stock_depuis_2000-C24.xlsx', sheet_name='Maïs', skiprows=4)
     dfBle = dfBle[:-11]
     dfMais = dfMais[:-11]
     dfColza = dfColza[:-11]
@@ -63,6 +63,6 @@ def insert_db(df):
     return r
 
 df = prep_dataframe()
-data = pd.concat([df[df['ESPECES'] == 'Blé tendre'].tail(1), df[df['ESPECES'] == 'Maïs'].tail(1), df[df['ESPECES'] == 'Colza'].tail(1)])
+data = pd.concat([df[df['ESPECES'] == 'Blé tendre'].tail(4), df[df['ESPECES'] == 'Maïs'].tail(4), df[df['ESPECES'] == 'Colza'].tail(4)])
 r = insert_db(data)
 print(r)
